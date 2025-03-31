@@ -24,64 +24,50 @@ def lemmatize_tokens(tokens):
     lemmatizer = WordNetLemmatizer()  # Создаём объект лемматизатора
     return [lemmatizer.lemmatize(token) for token in tokens]  # Лемматизируем каждый токен
 
-# Функция для обработки одного HTML-файла
-def process_html_file(file_path):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        html_content = file.read()  # Читаем содержимое HTML-файла
-
-    soup = BeautifulSoup(html_content, 'html.parser')  # Создаём объект BeautifulSoup для парсинга HTML
-    text_content = soup.get_text()  # Извлекаем текст без разметки
-
-    tokens = tokenize_and_filter(text_content)  # Токенизируем и фильтруем текст
-    lemmatized_tokens = lemmatize_tokens(tokens)  # Лемматизируем токены
-
-    return tokens, lemmatized_tokens  # Возвращаем токены и их лемматизированные формы
-
-# Функция для обработки всех HTML-файлов в директории
+# Функция для Обработки всех HTML-файлов в директории
 def process_all_html_files(directory_path):
-    all_tokens = []  # Список для хранения всех токенов
-    all_lemmatized_tokens = []  # Список для хранения всех лемматизированных токенов
+    token_folder = "token_pages"
+    lemmatized_folder = "lemmatized_tokens_pages"
 
-    print("DEBUG: ", directory_path)
-    for filename in os.listdir(directory_path):  # Перебираем все файлы в папке
-        file_path = os.path.join(directory_path, filename)  # Формируем полный путь к файлу
-        if filename.endswith('.html'):  # Проверяем, является ли файл HTML
-            print(f"Обрабатывается файл: {filename}")  # Выводим название файла
-            tokens, lemmatized_tokens = process_html_file(file_path)  # Обрабатываем файл
-            all_tokens.extend(tokens)  # Добавляем токены в общий список
-            all_lemmatized_tokens.extend(lemmatized_tokens)  # Добавляем лемматизированные токены
+    for filename in os.listdir(directory_path):
+        if filename.endswith('.html'):
+            file_path = os.path.join(directory_path, filename)
+            print(f"Обрабатывается файл: {filename}")
+            tokens, lemmatized_tokens = process_html_file(file_path)
 
-    all_tokens = list(set(all_tokens))  # Убираем дубликаты из списка токенов
+            unique_tokens = list(set(tokens))
+            
+            lemmatized_grouped = {}
+            for token, lemma in zip(tokens, lemmatized_tokens):
+                if lemma not in lemmatized_grouped:
+                    lemmatized_grouped[lemma] = []
+                lemmatized_grouped[lemma].append(token)
 
-    # Группируем токены по леммам
-    lemmatized_grouped = {}
-    for token, lemmatized_token in zip(all_tokens, all_lemmatized_tokens):
-        if lemmatized_token not in lemmatized_grouped:
-            lemmatized_grouped[lemmatized_token] = []  # Создаём список, если леммы ещё нет в словаре
-        lemmatized_grouped[lemmatized_token].append(token)  # Добавляем токен в соответствующую лемму
+            base_filename = os.path.splitext(filename)[0]
 
-    return all_tokens, lemmatized_grouped  # Возвращаем списки токенов и сгруппированных лемм
+            # Запись в соответствующие папки
+            write_to_file(token_folder, f'tokens_{base_filename}.txt', unique_tokens)
+            write_to_file(lemmatized_folder, f'lemmatized_tokens_{base_filename}.txt', lemmatized_grouped, is_lemmatized=True)
+
+
 
 # Функция для записи данных в файл
-def write_to_file(filename, data, is_lemmatized=False):
-    with open(filename, 'w', encoding='utf-8') as file:
-        if is_lemmatized:  # Если записываем лемматизированные токены
+def write_to_file(folder, filename, data, is_lemmatized=False):
+    os.makedirs(folder, exist_ok=True)  # Создаём папку, если её ещё нет
+    file_path = os.path.join(folder, filename)
+    with open(file_path, 'w', encoding='utf-8') as file:
+        if is_lemmatized:
             for lemma, tokens in data.items():
-                file.write(f"{lemma} {' '.join(tokens)}\n")  # Формат: "лемма токен1 токен2 ..."
+                file.write(f"{lemma} {' '.join(tokens)}\n")
         else:
             for token in data:
-                file.write(f"{token}\n")  # Просто записываем каждый токен на новой строке
+                file.write(f"{token}\n")
+
 
 # Основная функция
 def main():
     directory_path = os.path.join(os.path.dirname(os.getcwd()), "downloaded_pages")  # Путь к папке с HTML-файлами
-    
-    all_tokens, lemmatized_grouped = process_all_html_files(directory_path)  # Обрабатываем все файлы
-
-    write_to_file('tokens.txt', all_tokens)  # Записываем токены в файл
-    write_to_file('lemmatized_tokens.txt', lemmatized_grouped, is_lemmatized=True)  # Записываем леммы
-
-    print(f"Токенов: {len(all_tokens)}. Лемматизированных токенов: {len(lemmatized_grouped)}")  # Выводим результат
+    process_all_html_files(directory_path)
 
 if __name__ == "__main__":
     main()  # Запускаем основную функцию
