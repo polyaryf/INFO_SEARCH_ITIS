@@ -1,4 +1,5 @@
 import re  # Импортируем модуль регулярных выражений для разбора текста
+import json  # Добавляем для сохранения индекса в файл
 
 # Словарь документов: ключ — ID, значение — текст документа
 documents = {
@@ -93,6 +94,12 @@ def run_search_engine():
     # Строим индекс и множество всех ID документов
     index = build_inverted_index(documents)
     all_doc_ids = set(documents.keys())
+
+       # ✅ Сохраняем индекс в файл JSON
+    with open("index.json", "w", encoding="utf-8") as f:
+        json.dump({word: list(doc_ids) for word, doc_ids in index.items()}, f, ensure_ascii=False, indent=4)
+
+    print("✅ Инвертированный индекс сохранён в файл 'index.json'\n")
 
     # Приветственное сообщение
     print("Введите логический запрос (используйте AND, OR, NOT, скобки).")
